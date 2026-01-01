@@ -5,20 +5,21 @@ import * as cheerio from 'cheerio';
 import { RecallCheckResult, RecallInfo } from '@/types';
 import { splitChassisNumber } from './index';
 
-const TOYOTA_RECALL_URL = 'https://www.toyota.co.jp/recall-search/dc/search';
+const TOYOTA_SEARCH_URL = 'https://www.toyota.co.jp/recall-search/dc/search';
+const TOYOTA_RESULT_URL = 'https://www.toyota.co.jp/recall-search/dc/result';
 
 // トヨタのリコール検索（fetch版）
 export async function checkToyotaRecall(chassisNumber: string): Promise<RecallCheckResult> {
   const [prefix, suffix] = splitChassisNumber(chassisNumber);
 
   try {
-    // フォームデータを作成
+    // フォームデータを作成（フォームのaction='result'に送信）
     const formData = new URLSearchParams();
     formData.append('FRAME_DIV', prefix);
     formData.append('FRAME_NO', suffix);
 
-    // POSTリクエストを送信
-    const response = await fetch(TOYOTA_RECALL_URL, {
+    // 結果ページにPOSTリクエストを送信
+    const response = await fetch(TOYOTA_RESULT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -26,7 +27,7 @@ export async function checkToyotaRecall(chassisNumber: string): Promise<RecallCh
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ja,en;q=0.9',
         'Origin': 'https://www.toyota.co.jp',
-        'Referer': TOYOTA_RECALL_URL,
+        'Referer': TOYOTA_SEARCH_URL,
       },
       body: formData.toString(),
       signal: AbortSignal.timeout(30000),
@@ -37,7 +38,7 @@ export async function checkToyotaRecall(chassisNumber: string): Promise<RecallCh
     }
 
     const html = await response.text();
-    const recalls = parseRecallResults(html, response.url);
+    const recalls = parseRecallResults(html, chassisNumber);
 
     return {
       chassisNumber,
@@ -60,7 +61,7 @@ export async function checkToyotaRecall(chassisNumber: string): Promise<RecallCh
         id: 'toyota-manual-check',
         recallId: 'MANUAL',
         title: '公式サイトで確認が必要です',
-        description: `自動検索に失敗しました。トヨタ公式サイトで直接ご確認ください: ${TOYOTA_RECALL_URL}`,
+        description: `トヨタ公式サイトで直接ご確認ください`,
         severity: 'medium',
         status: 'pending',
         publishedAt: new Date().toISOString().split('T')[0]
@@ -72,7 +73,7 @@ export async function checkToyotaRecall(chassisNumber: string): Promise<RecallCh
 }
 
 // 結果HTMLをパース
-function parseRecallResults(html: string, resultUrl: string = ''): RecallInfo[] {
+function parseRecallResults(html: string, chassisNumber: string): RecallInfo[] {
   const $ = cheerio.load(html);
   const recalls: RecallInfo[] = [];
   const bodyText = $('body').text();
@@ -84,46 +85,71 @@ function parseRecallResults(html: string, resultUrl: string = ''): RecallInfo[] 
     return [];
   }
 
-  // リコール情報がある場合（テーブル形式で表示される）
-  $('table tr').each((index, element) => {
-    if (index === 0) return; // ヘッダー行をスキップ
+  // リコール詳細リンクを探す（toyota.jp/recall/YYYY/MMDD.html形式）
+  $('a[href*="/recall/"]').each((index, element) => {
+    const $link = $(element);
+    const href = $link.attr('href') || '';
+    const text = $link.text().trim();
 
-    const $row = $(element);
-    const cells = $row.find('td');
+    // リコール詳細ページへのリンクを検出
+    if (href.match(/\/recall\/\d{4}\/\d+\.html/) && text.length > 5) {
+      const fullUrl = href.startsWith('http') ? href : `https://toyota.jp${href}`;
 
-    if (cells.length >= 2) {
-      const title = $(cells[1]).text().trim();
-      const dateText = $(cells[0]).text().trim();
+      // 親要素から日付を取得
+      const $row = $link.closest('tr');
+      const dateText = $row.find('td:first-child').text().trim();
 
-      if (title && title.length > 3) {
-        recalls.push({
-          id: `toyota-${index}`,
-          recallId: `T${Date.now()}-${index}`,
-          title,
-          description: $(cells[2])?.text().trim() || '',
-          severity: determineSeverity(title),
-          status: bodyText.includes('実施済') ? 'completed' : 'pending',
-          publishedAt: dateText || new Date().toISOString().split('T')[0]
-        });
-      }
+      recalls.push({
+        id: `toyota-${index}`,
+        recallId: href.match(/(\d+)\.html$/)?.[1] || `T${Date.now()}-${index}`,
+        title: text,
+        description: fullUrl,
+        severity: determineSeverity(text),
+        status: bodyText.includes('実施済') ? 'completed' : 'pending',
+        publishedAt: dateText || new Date().toISOString().split('T')[0]
+      });
     }
   });
 
-  // テーブルがない場合、リコール対象かどうかテキストで判定
+  // リンクが見つからない場合、テーブルから情報を抽出
   if (recalls.length === 0) {
-    // リコール対象の可能性がある場合
-    if (bodyText.includes('リコール対象') ||
-        (bodyText.includes('リコール') && !bodyText.includes('対象はなく') && !bodyText.includes('該当するリコール等はありません'))) {
-      recalls.push({
-        id: 'toyota-possible',
-        recallId: `T${Date.now()}`,
-        title: 'リコール対象の可能性があります',
-        description: `詳細は公式サイトでご確認ください: ${TOYOTA_RECALL_URL}`,
-        severity: 'medium',
-        status: 'pending',
-        publishedAt: new Date().toISOString().split('T')[0]
-      });
-    }
+    $('table tr').each((index, element) => {
+      if (index === 0) return;
+
+      const $row = $(element);
+      const cells = $row.find('td');
+
+      if (cells.length >= 2) {
+        const title = $(cells[1]).text().trim();
+        const dateText = $(cells[0]).text().trim();
+
+        if (title && title.length > 3) {
+          recalls.push({
+            id: `toyota-${index}`,
+            recallId: `T${Date.now()}-${index}`,
+            title,
+            description: '',
+            severity: determineSeverity(title),
+            status: bodyText.includes('実施済') ? 'completed' : 'pending',
+            publishedAt: dateText || new Date().toISOString().split('T')[0]
+          });
+        }
+      }
+    });
+  }
+
+  // それでも見つからないが、リコール対象の可能性がある場合
+  if (recalls.length === 0 && bodyText.includes('リコール') &&
+      !bodyText.includes('対象はなく') && !bodyText.includes('該当するリコール等はありません')) {
+    recalls.push({
+      id: 'toyota-possible',
+      recallId: `T${Date.now()}`,
+      title: 'リコール対象の可能性があります',
+      description: '',
+      severity: 'medium',
+      status: 'pending',
+      publishedAt: new Date().toISOString().split('T')[0]
+    });
   }
 
   return recalls;
