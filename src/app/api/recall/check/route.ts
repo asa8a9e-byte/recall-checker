@@ -28,6 +28,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!maker) {
+      return NextResponse.json(
+        { success: false, error: 'メーカーを選択してください' },
+        { status: 400 }
+      );
+    }
+
     const cleanedChassis = chassisNumber.trim().toUpperCase();
     const prisma = await getPrisma();
 
