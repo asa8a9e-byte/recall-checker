@@ -2,22 +2,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchAllRecallNews } from '@/lib/recall-news';
-import { prisma } from '@/lib/db';
+
+// インメモリキャッシュ（サーバーレス環境でも動作）
+let newsCache: { data: unknown; expiresAt: number } | null = null;
 
 export async function GET(request: NextRequest) {
   try {
-    // キャッシュを確認（1時間有効）
-    const cached = await prisma.recallNewsCache.findFirst({
-      where: {
-        expiresAt: { gt: new Date() }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    if (cached) {
+    // インメモリキャッシュを確認（1時間有効）
+    const now = Date.now();
+    if (newsCache && newsCache.expiresAt > now) {
       return NextResponse.json({
         success: true,
-        data: JSON.parse(cached.newsData),
+        data: newsCache.data,
         cached: true
       });
     }
@@ -25,23 +21,11 @@ export async function GET(request: NextRequest) {
     // 最新のリコール情報を取得（各メーカー10件）
     const news = await fetchAllRecallNews(10);
 
-    // キャッシュに保存（1時間有効）
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
-
-    await prisma.recallNewsCache.create({
-      data: {
-        newsData: JSON.stringify(news),
-        expiresAt
-      }
-    });
-
-    // 古いキャッシュを削除
-    await prisma.recallNewsCache.deleteMany({
-      where: {
-        expiresAt: { lt: new Date() }
-      }
-    });
+    // インメモリキャッシュに保存（1時間有効）
+    newsCache = {
+      data: news,
+      expiresAt: now + 60 * 60 * 1000 // 1時間
+    };
 
     return NextResponse.json({
       success: true,

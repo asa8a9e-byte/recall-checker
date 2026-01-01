@@ -1,7 +1,16 @@
 // src/app/api/inventory/[id]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+
+// データベース接続を試みる（オプショナル）
+async function getPrisma() {
+  try {
+    const { prisma } = await import('@/lib/db');
+    return prisma;
+  } catch {
+    return null;
+  }
+}
 
 // 在庫詳細取得
 export async function GET(
@@ -9,6 +18,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrisma();
+
+    if (!prisma) {
+      return NextResponse.json(
+        { success: false, error: 'データベース未設定' },
+        { status: 503 }
+      );
+    }
+
     const { id } = await params;
     const vehicle = await prisma.vehicle.findUnique({
       where: { id },
@@ -25,14 +43,14 @@ export async function GET(
         }
       }
     });
-    
+
     if (!vehicle) {
       return NextResponse.json(
         { success: false, error: '車両が見つかりません' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json({
       success: true,
       data: {
@@ -61,7 +79,7 @@ export async function GET(
         }))
       }
     });
-    
+
   } catch (error) {
     console.error('在庫詳細取得エラー:', error);
     return NextResponse.json(
@@ -77,6 +95,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrisma();
+
+    if (!prisma) {
+      return NextResponse.json(
+        { success: false, error: 'データベース未設定' },
+        { status: 503 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { maker, model, year } = body;
@@ -89,12 +116,12 @@ export async function PATCH(
         ...(year && { year })
       }
     });
-    
+
     return NextResponse.json({
       success: true,
       data: vehicle
     });
-    
+
   } catch (error) {
     console.error('在庫更新エラー:', error);
     return NextResponse.json(
@@ -110,16 +137,25 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrisma();
+
+    if (!prisma) {
+      return NextResponse.json(
+        { success: false, error: 'データベース未設定' },
+        { status: 503 }
+      );
+    }
+
     const { id } = await params;
     await prisma.vehicle.delete({
       where: { id }
     });
-    
+
     return NextResponse.json({
       success: true,
       message: '削除しました'
     });
-    
+
   } catch (error) {
     console.error('在庫削除エラー:', error);
     return NextResponse.json(
