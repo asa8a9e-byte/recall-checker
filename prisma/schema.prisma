@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 在庫車両
+model Vehicle {
+  id            String   @id @default(cuid())
+  chassisNumber String   @unique  // 車台番号
+  maker         String            // メーカー
+  model         String?           // 車種名
+  year          String?           // 年式
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  recalls       VehicleRecall[]
+  alerts        Alert[]
+}
+
+// リコール情報
+model Recall {
+  id          String   @id @default(cuid())
+  recallId    String   @unique  // メーカーのリコールID
+  maker       String            // 対象メーカー
+  title       String            // リコール名
+  description String?           // 詳細
+  severity    String   @default("medium")  // high/medium/low
+  publishedAt DateTime          // 発表日
+  createdAt   DateTime @default(now())
+  
+  vehicles    VehicleRecall[]
+}
+
+// 車両とリコールの関連
+model VehicleRecall {
+  id         String   @id @default(cuid())
+  vehicleId  String
+  recallId   String
+  status     String   @default("pending")  // pending/completed
+  checkedAt  DateTime @default(now())
+  
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  recall     Recall   @relation(fields: [recallId], references: [id], onDelete: Cascade)
+  
+  @@unique([vehicleId, recallId])
+}
+
+// アラート通知
+model Alert {
+  id        String   @id @default(cuid())
+  vehicleId String
+  title     String
+  message   String?
+  status    String   @default("unread")  // unread/read
+  createdAt DateTime @default(now())
+  
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
+
+// リコールチェックのキャッシュ
+model RecallCache {
+  id            String   @id @default(cuid())
+  chassisNumber String   @unique
+  maker         String
+  hasRecall     Boolean
+  recallData    String?  // JSON形式でリコール情報を保存
+  checkedAt     DateTime @default(now())
+  expiresAt     DateTime // キャッシュ有効期限
+}
+
+// リコールニュースのキャッシュ
+model RecallNewsCache {
+  id        String   @id @default(cuid())
+  newsData  String   // JSON形式でニュース情報を保存
+  createdAt DateTime @default(now())
+  expiresAt DateTime // キャッシュ有効期限
+}
