@@ -8,13 +8,35 @@ import { checkMazdaRecall } from './mazda';
 import { checkSubaruRecall } from './subaru';
 import { checkDaihatsuRecall } from './daihatsu';
 
-// メーカー判定
+// メーカー判定（長いプレフィックスを優先）
 export function detectMaker(chassisNumber: string): Maker | null {
   const upperChassis = chassisNumber.toUpperCase();
-  
+
+  // 全プレフィックスを長さ順にソートして、長いものから先にマッチング
+  const allPrefixes: { maker: Maker; prefix: string }[] = [];
   for (const [maker, prefixes] of Object.entries(MAKER_PREFIXES)) {
-    if (prefixes.some(prefix => upperChassis.startsWith(prefix))) {
-      return maker as Maker;
+    for (const prefix of prefixes) {
+      allPrefixes.push({ maker: maker as Maker, prefix });
+    }
+  }
+
+  // 長い順にソート
+  allPrefixes.sort((a, b) => b.prefix.length - a.prefix.length);
+
+  // S700B/S710Bはスバル・サンバー、S700V/S710Vはダイハツ・ハイゼット
+  // 特殊ケースを先に処理
+  if (upperChassis.startsWith('S700B') || upperChassis.startsWith('S710B') ||
+      upperChassis.startsWith('S500B') || upperChassis.startsWith('S510B')) {
+    return 'スバル';
+  }
+  if (upperChassis.startsWith('S700V') || upperChassis.startsWith('S710V') ||
+      upperChassis.startsWith('S500V') || upperChassis.startsWith('S510V')) {
+    return 'ダイハツ';
+  }
+
+  for (const { maker, prefix } of allPrefixes) {
+    if (upperChassis.startsWith(prefix)) {
+      return maker;
     }
   }
   return null;

@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 最新のリコール情報を取得
-    const news = await fetchAllRecallNews(5);
+    // 最新のリコール情報を取得（各メーカー10件）
+    const news = await fetchAllRecallNews(10);
 
     // キャッシュに保存（1時間有効）
     const expiresAt = new Date();

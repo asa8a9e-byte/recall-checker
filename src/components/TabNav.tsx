@@ -11,9 +11,9 @@ interface Tab {
 }
 
 const tabs: Tab[] = [
-  { id: 'check', label: 'Check', icon: <Search className="w-4 h-4" /> },
-  { id: 'inventory', label: 'Inventory', icon: <ClipboardList className="w-4 h-4" /> },
-  { id: 'alerts', label: 'Alerts', icon: <Bell className="w-4 h-4" /> },
+  { id: 'check', label: 'リコール検索', icon: <Search className="w-4 h-4" /> },
+  { id: 'inventory', label: '在庫管理', icon: <ClipboardList className="w-4 h-4" /> },
+  { id: 'alerts', label: 'アラート', icon: <Bell className="w-4 h-4" /> },
 ];
 
 interface TabNavProps {

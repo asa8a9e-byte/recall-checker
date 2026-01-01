@@ -199,7 +199,7 @@ export default function Home() {
                 <div className="flex-1 relative">
                   <input
                     type="text"
-                    placeholder="Enter chassis number (e.g. ZWR80-1234567)"
+                    placeholder="車台番号を入力（例：S700B-0005456）"
                     value={chassisNumber}
                     onChange={(e) => setChassisNumber(e.target.value.toUpperCase())}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -209,84 +209,28 @@ export default function Home() {
                 <select
                   value={selectedMaker}
                   onChange={(e) => setSelectedMaker(e.target.value)}
-                  className="px-4 py-3.5 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm text-gray-600 cursor-pointer"
+                  className={`px-4 py-3.5 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer ${
+                    selectedMaker ? 'bg-gray-50 text-gray-700' : 'bg-amber-50 text-amber-700'
+                  }`}
                 >
-                  <option value="">Auto detect</option>
+                  <option value="">メーカーを選択</option>
                   {MAKERS.map(maker => (
                     <option key={maker} value={maker}>{maker}</option>
                   ))}
                 </select>
                 <button
                   onClick={handleSearch}
-                  disabled={isSearching || !chassisNumber.trim()}
+                  disabled={isSearching || !chassisNumber.trim() || !selectedMaker}
                   className="px-6 py-3.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 min-w-[100px]"
                 >
                   {isSearching ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : 'Search'}
+                  ) : '検索'}
                 </button>
               </div>
-              <p className="text-gray-400 text-xs mt-3">
-                Supported: Toyota, Nissan, Honda, Mazda, Subaru, Daihatsu
+              <p className="text-gray-500 text-xs mt-3">
+                対応メーカー：トヨタ・日産・ホンダ・マツダ・スバル・ダイハツ
               </p>
-            </div>
-
-            {/* リコールニュースポータル */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Latest Recalls</h2>
-                <span className="text-xs text-gray-400">From official sources</span>
-              </div>
-              {isLoadingNews ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                  <span className="ml-2 text-sm text-gray-400">Loading...</span>
-                </div>
-              ) : recallNews.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {MAKERS.map(maker => {
-                    const makerNews = recallNews.filter(n => n.maker === maker);
-                    if (makerNews.length === 0) return null;
-                    return (
-                      <div key={maker} className="group">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="w-1 h-4 bg-gray-800 rounded-full"></span>
-                          <span className="text-sm font-medium text-gray-700">{maker}</span>
-                        </div>
-                        <div className="space-y-2">
-                          {makerNews.slice(0, 3).map((news, idx) => (
-                            <a
-                              key={idx}
-                              href={news.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-all duration-200 group/item"
-                            >
-                              <div className="text-sm text-gray-600 line-clamp-2 group-hover/item:text-gray-900 transition-colors">{news.title}</div>
-                              {news.date && (
-                                <div className="text-xs text-gray-400 mt-1.5">{news.date}</div>
-                              )}
-                            </a>
-                          ))}
-                        </div>
-                        <a
-                          href={MAKER_RECALL_URLS[maker as Maker]}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          View all
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-sm text-gray-400">
-                  Unable to load recall information
-                </div>
-              )}
             </div>
 
             {/* エラー表示 */}
@@ -301,7 +245,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* 検索結果 */}
+            {/* 検索結果 - 検索窓のすぐ下に表示 */}
             {searchResult && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className={`p-5 ${searchResult.hasRecall ? 'bg-red-50' : 'bg-emerald-50'}`}>
@@ -317,11 +261,11 @@ export default function Home() {
                     </div>
                     <div>
                       <h3 className={`font-semibold ${searchResult.hasRecall ? 'text-red-900' : 'text-emerald-900'}`}>
-                        {searchResult.hasRecall ? 'Recall Found' : 'No Recalls'}
+                        {searchResult.hasRecall ? 'リコール対象です' : 'リコール対象ではありません'}
                       </h3>
                       <p className="text-sm text-gray-600 mt-0.5">
                         {searchResult.maker} / {searchResult.chassisNumber}
-                        {searchResult.cached && <span className="text-gray-400 ml-2">(cached)</span>}
+                        {searchResult.cached && <span className="text-gray-400 ml-2">(キャッシュ)</span>}
                       </p>
                     </div>
                   </div>
@@ -329,8 +273,8 @@ export default function Home() {
 
                 {searchResult.hasRecall && searchResult.recalls.length > 0 && (
                   <div className="p-5">
-                    <div className="text-xs text-gray-400 uppercase tracking-wider mb-4">
-                      {searchResult.recalls.length} Recall{searchResult.recalls.length > 1 ? 's' : ''} Found
+                    <div className="text-xs text-gray-400 tracking-wider mb-4">
+                      リコール情報 {searchResult.recalls.length}件
                     </div>
                     <div className="space-y-3">
                       {searchResult.recalls.map((recall, idx) => (
@@ -343,7 +287,7 @@ export default function Home() {
                                   recall.severity === 'medium' ? 'bg-amber-100 text-amber-700' :
                                   'bg-gray-100 text-gray-600'
                                 }`}>
-                                  {recall.severity === 'high' ? 'Critical' : recall.severity === 'medium' ? 'Warning' : 'Info'}
+                                  {recall.severity === 'high' ? '重要' : recall.severity === 'medium' ? '注意' : '情報'}
                                 </span>
                                 <span className="text-xs text-gray-400">{recall.publishedAt}</span>
                               </div>
@@ -359,7 +303,7 @@ export default function Home() {
                                         rel="noopener noreferrer"
                                         className="text-gray-700 hover:text-gray-900 inline-flex items-center gap-1 ml-1 underline underline-offset-2"
                                       >
-                                        View details
+                                        詳細を見る
                                         <ExternalLink className="w-3 h-3" />
                                       </a>
                                     </>
@@ -370,7 +314,7 @@ export default function Home() {
                             <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium ${
                               recall.status === 'pending' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
                             }`}>
-                              {recall.status === 'pending' ? 'Pending' : 'Completed'}
+                              {recall.status === 'pending' ? '未対応' : '対応済'}
                             </span>
                           </div>
                         </div>
@@ -388,11 +332,69 @@ export default function Home() {
                     className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    View on {searchResult.maker} official site
+                    {searchResult.maker}公式サイトで確認
                   </a>
                 </div>
               </div>
             )}
+
+            {/* リコールニュースポータル */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-sm font-semibold text-gray-800 tracking-wider">最新リコール情報</h2>
+                <span className="text-xs text-gray-500">各メーカー公式サイトより</span>
+              </div>
+              {isLoadingNews ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  <span className="ml-2 text-sm text-gray-400">読み込み中...</span>
+                </div>
+              ) : recallNews.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {MAKERS.map(maker => {
+                    const makerNews = recallNews.filter(n => n.maker === maker);
+                    if (makerNews.length === 0) return null;
+                    return (
+                      <div key={maker} className="group">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="w-1.5 h-4 bg-gray-900 rounded-full"></span>
+                          <span className="text-sm font-semibold text-gray-800">{maker}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {makerNews.slice(0, 3).map((news, idx) => (
+                            <a
+                              key={idx}
+                              href={news.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200 group/item"
+                            >
+                              <div className="text-sm text-gray-700 line-clamp-2 group-hover/item:text-gray-900 transition-colors">{news.title}</div>
+                              {news.date && (
+                                <div className="text-xs text-gray-500 mt-1.5 font-medium">{news.date}</div>
+                              )}
+                            </a>
+                          ))}
+                        </div>
+                        <a
+                          href={MAKER_RECALL_URLS[maker as Maker]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-3 text-xs text-gray-500 hover:text-gray-700 font-medium transition-colors"
+                        >
+                          すべて見る
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-sm text-gray-400">
+                  リコール情報を取得できませんでした
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -403,7 +405,7 @@ export default function Home() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <input
                   type="text"
-                  placeholder="Chassis No."
+                  placeholder="車台番号"
                   value={newCar.chassisNumber}
                   onChange={(e) => setNewCar({...newCar, chassisNumber: e.target.value.toUpperCase()})}
                   className="px-3 py-2.5 bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-gray-200 outline-none text-sm font-mono"
@@ -413,21 +415,21 @@ export default function Home() {
                   onChange={(e) => setNewCar({...newCar, maker: e.target.value})}
                   className="px-3 py-2.5 bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer"
                 >
-                  <option value="">Maker</option>
+                  <option value="">メーカー</option>
                   {MAKERS.map(maker => (
                     <option key={maker} value={maker}>{maker}</option>
                   ))}
                 </select>
                 <input
                   type="text"
-                  placeholder="Model"
+                  placeholder="車種名"
                   value={newCar.model}
                   onChange={(e) => setNewCar({...newCar, model: e.target.value})}
                   className="px-3 py-2.5 bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-gray-200 outline-none text-sm"
                 />
                 <input
                   type="text"
-                  placeholder="Year"
+                  placeholder="年式"
                   value={newCar.year}
                   onChange={(e) => setNewCar({...newCar, year: e.target.value})}
                   className="px-3 py-2.5 bg-gray-50 border-0 rounded-lg focus:ring-2 focus:ring-gray-200 outline-none text-sm"
@@ -438,7 +440,7 @@ export default function Home() {
                   className="px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
                 >
                   {isAddingCar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Add
+                  追加
                 </button>
               </div>
             </div>
@@ -447,15 +449,15 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                 <div className="text-3xl font-semibold text-gray-800">{summary.total}</div>
-                <div className="text-gray-400 text-sm mt-1">Total</div>
+                <div className="text-gray-400 text-sm mt-1">総在庫</div>
               </div>
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                 <div className="text-3xl font-semibold text-red-600">{summary.withRecall}</div>
-                <div className="text-gray-400 text-sm mt-1">With Recalls</div>
+                <div className="text-gray-400 text-sm mt-1">リコール対象</div>
               </div>
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                 <div className="text-3xl font-semibold text-emerald-600">{summary.withoutRecall}</div>
-                <div className="text-gray-400 text-sm mt-1">Clear</div>
+                <div className="text-gray-400 text-sm mt-1">問題なし</div>
               </div>
             </div>
 
@@ -465,12 +467,12 @@ export default function Home() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Chassis</th>
-                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Maker</th>
-                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Model</th>
-                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Year</th>
-                      <th className="px-5 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                      <th className="px-5 py-4 text-center text-xs font-medium text-gray-400 uppercase tracking-wider"></th>
+                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 tracking-wider">車台番号</th>
+                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 tracking-wider">メーカー</th>
+                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 tracking-wider">車種</th>
+                      <th className="px-5 py-4 text-left text-xs font-medium text-gray-400 tracking-wider">年式</th>
+                      <th className="px-5 py-4 text-center text-xs font-medium text-gray-400 tracking-wider">状態</th>
+                      <th className="px-5 py-4 text-center text-xs font-medium text-gray-400 tracking-wider"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -483,11 +485,11 @@ export default function Home() {
                         <td className="px-5 py-4 text-center">
                           {car.recallCount > 0 ? (
                             <span className="px-2.5 py-1 bg-red-50 text-red-600 rounded-lg text-xs font-medium">
-                              {car.recallCount} recall{car.recallCount > 1 ? 's' : ''}
+                              リコール {car.recallCount}件
                             </span>
                           ) : (
                             <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-medium">
-                              Clear
+                              問題なし
                             </span>
                           )}
                         </td>
@@ -505,7 +507,7 @@ export default function Home() {
                 </table>
               ) : (
                 <div className="p-12 text-center text-gray-400 text-sm">
-                  No vehicles in inventory
+                  登録車両はありません
                 </div>
               )}
             </div>
@@ -518,12 +520,12 @@ export default function Home() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               {unreadCount > 0 && (
                 <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-xs text-gray-400">{unreadCount} unread</span>
+                  <span className="text-xs text-gray-400">未読 {unreadCount}件</span>
                   <button
                     onClick={handleMarkAllRead}
                     className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    Mark all as read
+                    すべて既読にする
                   </button>
                 </div>
               )}
@@ -562,7 +564,7 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="p-12 text-center text-gray-400 text-sm">
-                  No alerts
+                  通知はありません
                 </div>
               )}
             </div>
@@ -579,12 +581,12 @@ export default function Home() {
                 <span className="text-white text-[8px] font-bold">RC</span>
               </div>
               <span className="text-xs text-gray-400">
-                Data sourced from official manufacturer sites
+                各メーカー公式サイトの情報を元に表示しています
               </span>
             </div>
             <div className="flex gap-6 text-xs text-gray-400">
-              <span className="hover:text-gray-600 cursor-pointer transition-colors">Terms</span>
-              <span className="hover:text-gray-600 cursor-pointer transition-colors">Privacy</span>
+              <span className="hover:text-gray-600 cursor-pointer transition-colors">利用規約</span>
+              <span className="hover:text-gray-600 cursor-pointer transition-colors">プライバシー</span>
             </div>
           </div>
         </div>

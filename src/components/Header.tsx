@@ -17,8 +17,8 @@ export default function Header({ unreadCount, onAlertClick }: HeaderProps) {
               <span className="text-white text-xs font-bold">RC</span>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 tracking-tight">Recall Checker</h1>
-              <p className="text-xs text-gray-400">Vehicle Recall Management</p>
+              <h1 className="text-lg font-semibold text-gray-900 tracking-tight">リコールチェッカー</h1>
+              <p className="text-xs text-gray-400">中古車リコール管理</p>
             </div>
           </div>
           <button
