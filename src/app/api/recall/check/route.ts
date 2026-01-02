@@ -1,7 +1,7 @@
 // src/app/api/recall/check/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRecall } from '@/lib/recall-checker';
+import { checkRecall, checkRecallByModel } from '@/lib/recall-checker';
 
 // データベース接続を試みる（オプショナル）
 async function getPrisma() {
@@ -19,8 +19,34 @@ const memoryCache = new Map<string, { data: unknown; expiresAt: number }>();
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { chassisNumber, maker, skipCache } = body;
+    const {
+      chassisNumber,
+      maker,
+      modelName,
+      modelType,
+      searchMethod = 'chassis',  // 'chassis' | 'model'
+      skipCache
+    } = body;
 
+    // 車種・型式検索の場合
+    if (searchMethod === 'model') {
+      if (!modelName || !modelType) {
+        return NextResponse.json(
+          { success: false, error: '車種名と型式を入力してください' },
+          { status: 400 }
+        );
+      }
+
+      // 車種・型式で国交省サイトを検索
+      const result = await checkRecallByModel(modelName, modelType);
+
+      return NextResponse.json({
+        success: true,
+        data: result
+      });
+    }
+
+    // 車台番号検索の場合（既存ロジック）
     if (!chassisNumber) {
       return NextResponse.json(
         { success: false, error: '車台番号を入力してください' },

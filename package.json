@@ -12,7 +12,14 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "check-recalls": "tsx scripts/check-new-recalls.ts"
+    "check-recalls": "tsx scripts/check-new-recalls.ts",
+    "scrape:goonet": "tsx scripts/scrape-goonet/index.ts",
+    "scrape:all": "tsx scripts/scrape-goonet/run-all.ts",
+    "scrape:manufacturers": "tsx scripts/scrape-goonet/1-fetch-manufacturers.ts",
+    "scrape:models": "tsx scripts/scrape-goonet/2-fetch-models.ts",
+    "scrape:types": "tsx scripts/scrape-goonet/3-fetch-model-types.ts",
+    "scrape:grades": "tsx scripts/scrape-goonet/4-fetch-grade-details.ts",
+    "scrape:test-suzuki": "tsx scripts/scrape-goonet/test-suzuki.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

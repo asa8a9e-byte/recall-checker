@@ -7,6 +7,7 @@ import { checkHondaRecall } from './honda';
 import { checkMazdaRecall } from './mazda';
 import { checkSubaruRecall } from './subaru';
 import { checkDaihatsuRecall } from './daihatsu';
+import { checkMLITRecall } from './mlit';
 
 // 車台番号の分割（ハイフンで分割）
 export function splitChassisNumber(chassis: string): [string, string] {
@@ -57,5 +58,13 @@ export async function checkRecall(
 
   // リコールチェック実行
   return await checker(cleanedChassis);
+}
+
+// 車名・型式でのリコールチェック（国交省サイト）
+export async function checkRecallByModel(
+  modelName: string,
+  modelType: string
+): Promise<RecallCheckResult> {
+  return await checkMLITRecall(modelName, modelType);
 }
 

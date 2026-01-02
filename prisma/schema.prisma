@@ -7,16 +7,88 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// メーカーマスタ
+model Manufacturer {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  goonetCode    String?        @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  vehicleModels VehicleModel[]
+}
+
+// 車種マスタ
+model VehicleModel {
+  id             String        @id @default(cuid())
+  manufacturerId String
+  name           String
+  nameKana       String?
+  goonetCode     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  manufacturer   Manufacturer  @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  modelTypes     ModelType[]
+
+  @@unique([manufacturerId, name])
+  @@index([nameKana])
+}
+
+// 型式マスタ
+model ModelType {
+  id             String       @id @default(cuid())
+  vehicleModelId String
+  typeCode       String       // 型式コード（例: 3BA-JB64W）
+  gradeName      String?      // グレード名（例: XG）
+  displacement   String?      // 排気量（例: 658cc）
+  doors          String?      // ドア数（例: 3）
+  transmission   String?      // 変速機（例: 5MT）
+  driveSystem    String?      // 駆動方式（例: パートタイム4WD）
+  seatingCapacity String?     // 乗車定員（例: 4名）
+  fuelEfficiency String?      // 燃費（例: 16.6km/l）
+  weight         String?      // 車両重量（例: 1060kg）
+  dimensions     String?      // 寸法（例: 3395×1475×1725mm）
+  price          String?      // 価格（例: 1918400）
+  description    String?      // その他の説明
+  startYear      String?      // 開始年式
+  endYear        String?      // 終了年式
+  catalogUrl     String?      // カタログURL
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  vehicleModel   VehicleModel @relation(fields: [vehicleModelId], references: [id], onDelete: Cascade)
+  vehicles       Vehicle[]
+
+  @@unique([vehicleModelId, typeCode])
+  @@index([typeCode])
+}
+
+// スクレイピングメタデータ
+model ScrapingMetadata {
+  id                String   @id @default(cuid())
+  source            String   @unique
+  lastScrapedAt     DateTime
+  lastSuccessAt     DateTime?
+  recordCount       Int      @default(0)
+  status            String   @default("idle")
+  errorMessage      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 // 在庫車両
 model Vehicle {
-  id            String   @id @default(cuid())
-  chassisNumber String   @unique  // 車台番号
-  maker         String            // メーカー
-  model         String?           // 車種名
-  year          String?           // 年式
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  id            String      @id @default(cuid())
+  chassisNumber String      @unique  // 車台番号
+  maker         String               // メーカー
+  model         String?              // 車種名
+  modelTypeId   String?              // 型式への参照
+  year          String?              // 年式
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  modelType     ModelType?  @relation(fields: [modelTypeId], references: [id])
   recalls       VehicleRecall[]
   alerts        Alert[]
 }
@@ -30,8 +102,9 @@ model Recall {
   description String?           // 詳細
   severity    String   @default("medium")  // high/medium/low
   publishedAt DateTime          // 発表日
+  detailUrl   String?           // 詳細ページURL（国交省）
   createdAt   DateTime @default(now())
-  
+
   vehicles    VehicleRecall[]
 }
 

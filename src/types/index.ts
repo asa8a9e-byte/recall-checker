@@ -9,6 +9,7 @@ export interface RecallInfo {
   severity: 'high' | 'medium' | 'low';
   status: 'pending' | 'completed';
   publishedAt: string;
+  detailUrl?: string;
 }
 
 // リコール検索結果
@@ -54,6 +55,50 @@ export interface Alert {
     chassisNumber: string;
     model?: string;
   };
+}
+
+// メーカーマスタ
+export interface Manufacturer {
+  id: string;
+  name: string;
+  goonetCode?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// 車種マスタ
+export interface VehicleModel {
+  id: string;
+  manufacturerId: string;
+  name: string;
+  nameKana?: string;
+  goonetCode?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  manufacturer?: Manufacturer;
+}
+
+// 型式マスタ
+export interface ModelType {
+  id: string;
+  vehicleModelId: string;
+  typeCode: string;
+  gradeName?: string;
+  displacement?: string;
+  doors?: string;
+  transmission?: string;
+  driveSystem?: string;
+  seatingCapacity?: string;
+  fuelEfficiency?: string;
+  weight?: string;
+  dimensions?: string;
+  price?: string;
+  description?: string;
+  startYear?: string;
+  endYear?: string;
+  catalogUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // API レスポンス

@@ -3,18 +3,31 @@
 import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import TabNav, { TabId } from '@/components/TabNav';
-import { RecallCheckResult, Vehicle, Alert, InventorySummary, MAKERS, MAKER_RECALL_URLS, Maker } from '@/types';
-import { AlertCircle, CheckCircle, Loader2, Trash2, Plus, ExternalLink } from 'lucide-react';
+import { RecallCheckResult, Vehicle, Alert, InventorySummary, MAKERS, MAKER_RECALL_URLS, Maker, Manufacturer, VehicleModel, ModelType } from '@/types';
+import { AlertCircle, CheckCircle, Loader2, Trash2, Plus, ExternalLink, Search } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>('check');
 
-  // 単発チェック
+  // 検索モード ('chassis' | 'model') - デフォルトは車種・型式検索
+  const [searchMode, setSearchMode] = useState<'chassis' | 'model'>('model');
+
+  // 車台番号検索
   const [chassisNumber, setChassisNumber] = useState('');
   const [selectedMaker, setSelectedMaker] = useState('');
   const [searchResult, setSearchResult] = useState<RecallCheckResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
+
+  // 車種・型式検索
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  const [selectedManufacturer, setSelectedManufacturer] = useState('');
+  const [modelQuery, setModelQuery] = useState('');
+  const [filteredModels, setFilteredModels] = useState<VehicleModel[]>([]);
+  const [selectedModel, setSelectedModel] = useState<VehicleModel | null>(null);
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [modelTypes, setModelTypes] = useState<ModelType[]>([]);
+  const [selectedType, setSelectedType] = useState('');
 
   // 在庫
   const [inventory, setInventory] = useState<Vehicle[]>([]);
@@ -84,25 +97,116 @@ export default function Home() {
     loadInventory();
     loadAlerts();
     loadRecallNews();
+    loadManufacturers();
   }, []);
+
+  // メーカー一覧取得
+  const loadManufacturers = async () => {
+    try {
+      const res = await fetch('/api/manufacturers');
+      const data = await res.json();
+      if (data.success) {
+        setManufacturers(data.data);
+      }
+    } catch (error) {
+      console.error('メーカー読み込みエラー:', error);
+    }
+  };
+
+  // 車種検索（インクリメンタル）
+  useEffect(() => {
+    // 既に車種が選択されている場合は検索しない
+    if (selectedModel) {
+      setFilteredModels([]);
+      setShowModelDropdown(false);
+      return;
+    }
+
+    if (modelQuery.length > 0) {
+      const searchModels = async () => {
+        try {
+          // メーカー指定がある場合とない場合でURLを変更
+          const url = selectedManufacturer
+            ? `/api/models?maker=${selectedManufacturer}&q=${encodeURIComponent(modelQuery)}`
+            : `/api/models?q=${encodeURIComponent(modelQuery)}`;
+
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) {
+            setFilteredModels(data.data);
+            setShowModelDropdown(true);
+          }
+        } catch (error) {
+          console.error('車種検索エラー:', error);
+        }
+      };
+
+      // デバウンス処理（300ms待機）
+      const timer = setTimeout(searchModels, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setFilteredModels([]);
+      setShowModelDropdown(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedManufacturer, modelQuery]);
+
+  // 型式一覧取得
+  useEffect(() => {
+    if (selectedModel) {
+      const loadTypes = async () => {
+        try {
+          const res = await fetch(`/api/models/${selectedModel.id}/types`);
+          const data = await res.json();
+          if (data.success) {
+            setModelTypes(data.data);
+          }
+        } catch (error) {
+          console.error('型式読み込みエラー:', error);
+        }
+      };
+
+      loadTypes();
+    } else {
+      setModelTypes([]);
+      setSelectedType('');
+    }
+  }, [selectedModel]);
 
   // リコール検索
   const handleSearch = async () => {
-    if (!chassisNumber.trim()) return;
+    // バリデーション
+    if (searchMode === 'chassis') {
+      if (!chassisNumber.trim()) return;
+    } else {
+      if (!selectedModel || !selectedType) {
+        setSearchError('車種と型式を選択してください');
+        return;
+      }
+    }
 
     setIsSearching(true);
     setSearchResult(null);
     setSearchError('');
 
     try {
+      const requestBody = searchMode === 'chassis'
+        ? {
+            searchMethod: 'chassis',
+            chassisNumber: chassisNumber.trim(),
+            maker: selectedMaker || undefined,
+            skipCache: true
+          }
+        : {
+            searchMethod: 'model',
+            modelName: selectedModel?.name,
+            modelType: selectedType
+          };
+
       const res = await fetch('/api/recall/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chassisNumber: chassisNumber.trim(),
-          maker: selectedMaker || undefined,
-          skipCache: true  // 常にキャッシュをスキップ
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await res.json();
@@ -116,6 +220,24 @@ export default function Home() {
       setSearchError('通信エラーが発生しました');
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  // 検索モード切り替え時のリセット
+  const handleSearchModeChange = (mode: 'chassis' | 'model') => {
+    setSearchMode(mode);
+    setSearchResult(null);
+    setSearchError('');
+
+    // 各モードの入力値をリセット
+    if (mode === 'chassis') {
+      setSelectedManufacturer('');
+      setModelQuery('');
+      setSelectedModel(null);
+      setSelectedType('');
+    } else {
+      setChassisNumber('');
+      setSelectedMaker('');
     }
   };
 
@@ -195,44 +317,247 @@ export default function Home() {
         {/* 単発チェックタブ */}
         {activeTab === 'check' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="車台番号を入力（例：S700B-0005456）"
-                    value={chassisNumber}
-                    onChange={(e) => setChassisNumber(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white outline-none text-base font-mono text-gray-800 placeholder:text-gray-400 transition-all"
-                  />
-                </div>
-                <select
-                  value={selectedMaker}
-                  onChange={(e) => setSelectedMaker(e.target.value)}
-                  className={`px-4 py-3.5 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer ${
-                    selectedMaker ? 'bg-gray-50 text-gray-700' : 'bg-amber-50 text-amber-700'
-                  }`}
-                >
-                  <option value="">メーカーを選択</option>
-                  {MAKERS.map(maker => (
-                    <option key={maker} value={maker}>{maker}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleSearch}
-                  disabled={isSearching || !chassisNumber.trim() || !selectedMaker}
-                  className="px-6 py-3.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 min-w-[100px]"
-                >
-                  {isSearching ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : '検索'}
-                </button>
-              </div>
-              <p className="text-gray-500 text-xs mt-3">
-                対応メーカー：トヨタ・日産・ホンダ・マツダ・スバル・ダイハツ
-              </p>
+            {/* 検索モード切り替え */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleSearchModeChange('model')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  searchMode === 'model'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                車種・型式で検索
+              </button>
+              <button
+                onClick={() => handleSearchModeChange('chassis')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  searchMode === 'chassis'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                車台番号で検索
+              </button>
             </div>
+
+            {/* 車台番号検索フォーム */}
+            {searchMode === 'chassis' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      placeholder="車台番号を入力（例：S700B-0005456）"
+                      value={chassisNumber}
+                      onChange={(e) => setChassisNumber(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white outline-none text-base font-mono text-gray-800 placeholder:text-gray-400 transition-all"
+                    />
+                  </div>
+                  <select
+                    value={selectedMaker}
+                    onChange={(e) => setSelectedMaker(e.target.value)}
+                    className={`px-4 py-3.5 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer ${
+                      selectedMaker ? 'bg-gray-50 text-gray-700' : 'bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    <option value="">メーカーを選択</option>
+                    {MAKERS.map(maker => (
+                      <option key={maker} value={maker}>{maker}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching || !chassisNumber.trim() || !selectedMaker}
+                    className="px-6 py-3.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 min-w-[100px]"
+                  >
+                    {isSearching ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : '検索'}
+                  </button>
+                </div>
+                <p className="text-gray-500 text-xs mt-3">
+                  対応メーカー：トヨタ・日産・ホンダ・マツダ・スバル・ダイハツ
+                </p>
+              </div>
+            )}
+
+            {/* 車種・型式検索フォーム */}
+            {searchMode === 'model' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="space-y-4">
+                  {/* 車種名検索（インクリメンタル） */}
+                  <div className="relative">
+                    <label className="block text-xs font-medium text-gray-500 mb-2">車種名</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={modelQuery}
+                        onChange={(e) => setModelQuery(e.target.value)}
+                        onFocus={() => filteredModels.length > 0 && setShowModelDropdown(true)}
+                        placeholder="車種名を入力（例：ロードスター、ハイゼットカーゴ）"
+                        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm"
+                      />
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+
+                    {/* 候補リスト */}
+                    {showModelDropdown && filteredModels.length > 0 && (
+                      <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                        {filteredModels.map(model => (
+                          <button
+                            key={model.id}
+                            onClick={() => {
+                              setSelectedModel(model);
+                              setModelQuery(model.name);
+                              setShowModelDropdown(false);
+                              // メーカーも自動選択
+                              if (model.manufacturer) {
+                                setSelectedManufacturer(model.manufacturerId);
+                              }
+                            }}
+                            className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-800">{model.name}</div>
+                                {model.nameKana && (
+                                  <div className="text-xs text-gray-500 mt-0.5">{model.nameKana}</div>
+                                )}
+                              </div>
+                              {model.manufacturer && (
+                                <div className="text-xs text-gray-400 ml-2">
+                                  {model.manufacturer.name}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {selectedModel && (
+                      <div className="mt-2 px-3 py-2 bg-emerald-50 rounded-lg text-sm text-emerald-700 flex items-center justify-between">
+                        <span>選択中: {selectedModel.name}</span>
+                        {selectedModel.manufacturer && (
+                          <span className="text-xs">({selectedModel.manufacturer.name})</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* メーカー選択（オプショナル・絞り込み用） */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-2">
+                      メーカーで絞り込み（オプション）
+                    </label>
+                    <select
+                      value={selectedManufacturer}
+                      onChange={(e) => {
+                        setSelectedManufacturer(e.target.value);
+                        setModelQuery('');
+                        setSelectedModel(null);
+                      }}
+                      className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer"
+                    >
+                      <option value="">すべてのメーカー</option>
+                      {manufacturers.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 型式選択 */}
+                  {selectedModel && modelTypes.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-2">
+                        グレード・型式 ({modelTypes.length}件)
+                      </label>
+                      <select
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value)}
+                        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer"
+                      >
+                        <option value="">グレード・型式を選択してください</option>
+                        {modelTypes.map(type => {
+                          // グレード名と型式を組み合わせて表示
+                          let displayText = type.typeCode;
+
+                          if (type.gradeName) {
+                            displayText = `${type.gradeName} - ${type.typeCode}`;
+                          }
+
+                          // 追加情報があれば表示
+                          const details = [];
+                          if (type.displacement) details.push(type.displacement);
+                          if (type.transmission) details.push(type.transmission);
+                          if (type.driveSystem) details.push(type.driveSystem);
+
+                          if (details.length > 0) {
+                            displayText += ` (${details.join(', ')})`;
+                          } else if (type.description) {
+                            displayText += ` (${type.description})`;
+                          }
+
+                          return (
+                            <option key={type.id} value={type.typeCode}>
+                              {displayText}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* 型式データがない場合の警告 */}
+                  {selectedModel && modelTypes.length === 0 && (
+                    <div className="px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700">
+                      この車種の型式データはまだ取得されていません。型式データがある車種を選択してください。
+                    </div>
+                  )}
+
+                  {/* 検索ボタン */}
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching || !selectedModel || !selectedType}
+                    className="w-full px-6 py-3.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  >
+                    {isSearching ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>検索中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4" />
+                        リコールを検索
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {isSearching && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4">
+                    <div className="flex items-start gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-blue-900 mb-1">
+                          国土交通省データベースから検索中
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          リコール情報の取得には1〜2分程度かかる場合があります。このままお待ちください。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-gray-500 text-xs mt-4">
+                  国土交通省のデータベースから検索します
+                </p>
+              </div>
+            )}
 
             {/* エラー表示 */}
             {searchError && (
@@ -311,6 +636,20 @@ export default function Home() {
                                   ) : recall.description}
                                 </p>
                               )}
+                              {/* ソース元リンク */}
+                              {recall.detailUrl && (
+                                <div className="flex items-center gap-3 mt-2.5">
+                                  <a
+                                    href={recall.detailUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-gray-400 hover:text-gray-600 inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    国交省で詳細を見る
+                                  </a>
+                                </div>
+                              )}
                             </div>
                             <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium ${
                               recall.status === 'pending' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
@@ -325,16 +664,30 @@ export default function Home() {
                 )}
 
                 {/* 公式サイトリンク */}
-                <div className="px-5 py-4 border-t border-gray-100">
-                  <a
-                    href={MAKER_RECALL_URLS[searchResult.maker as Maker] || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    {searchResult.maker}公式サイトで確認
-                  </a>
+                <div className="px-5 py-4 border-t border-gray-100 space-y-2">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <a
+                      href={MAKER_RECALL_URLS[searchResult.maker as Maker] || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      {searchResult.maker}公式サイトで確認
+                    </a>
+                    <a
+                      href="https://renrakuda.mlit.go.jp/renrakuda/announce.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      国土交通省リコール情報
+                    </a>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    出典：国土交通省ウェブサイト（自動車のリコール・不具合情報）
+                  </p>
                 </div>
               </div>
             )}
@@ -576,18 +929,35 @@ export default function Home() {
       {/* フッター */}
       <footer className="border-t border-gray-100 mt-16">
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-gray-900 rounded flex items-center justify-center">
-                <span className="text-white text-[8px] font-bold">RC</span>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-gray-900 rounded flex items-center justify-center">
+                  <span className="text-white text-[8px] font-bold">RC</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-gray-400">
+                    各メーカー公式サイトおよび国土交通省の情報を元に表示しています
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    出典：国土交通省ウェブサイト（自動車のリコール・不具合情報）
+                  </span>
+                </div>
               </div>
-              <span className="text-xs text-gray-400">
-                各メーカー公式サイトの情報を元に表示しています
-              </span>
+              <div className="flex gap-6 text-xs text-gray-400">
+                <a
+                  href="https://renrakuda.mlit.go.jp/renrakuda/announce.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-gray-600 transition-colors inline-flex items-center gap-1"
+                >
+                  国土交通省
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
-            <div className="flex gap-6 text-xs text-gray-400">
-              <span className="hover:text-gray-600 cursor-pointer transition-colors">利用規約</span>
-              <span className="hover:text-gray-600 cursor-pointer transition-colors">プライバシー</span>
+            <div className="text-xs text-gray-400 text-center md:text-left">
+              このサイトで提供する情報は参考情報です。正確な情報は各メーカーの公式サイトおよび国土交通省のウェブサイトでご確認ください。
             </div>
           </div>
         </div>
