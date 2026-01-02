@@ -6,14 +6,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Copy Prisma schema first (needed for postinstall script)
+COPY prisma ./prisma
+
 # Install dependencies
 RUN npm ci
 
 # Copy source code
 COPY . .
-
-# Generate Prisma client
-RUN npx prisma generate
 
 # Build the Next.js app
 RUN npm run build
