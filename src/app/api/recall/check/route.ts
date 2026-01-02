@@ -19,7 +19,7 @@ const memoryCache = new Map<string, { data: unknown; expiresAt: number }>();
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { chassisNumber, maker } = body;
+    const { chassisNumber, maker, skipCache } = body;
 
     if (!chassisNumber) {
       return NextResponse.json(
@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
     const cleanedChassis = chassisNumber.trim().toUpperCase();
     const prisma = await getPrisma();
 
-    // データベースキャッシュを確認
-    if (prisma) {
+    // データベースキャッシュを確認（skipCacheがtrueの場合はスキップ）
+    if (prisma && !skipCache) {
       try {
         const cached = await prisma.recallCache.findUnique({
           where: { chassisNumber: cleanedChassis }
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       } catch (e) {
         console.log('DB cache check skipped:', e);
       }
-    } else {
+    } else if (!skipCache) {
       // インメモリキャッシュを確認
       const memCached = memoryCache.get(cleanedChassis);
       if (memCached && memCached.expiresAt > Date.now()) {

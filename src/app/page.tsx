@@ -100,7 +100,8 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chassisNumber: chassisNumber.trim(),
-          maker: selectedMaker || undefined
+          maker: selectedMaker || undefined,
+          skipCache: true  // 常にキャッシュをスキップ
         }),
       });
 
