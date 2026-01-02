@@ -70,15 +70,6 @@ export async function checkNissanRecall(chassisNumber: string): Promise<RecallCh
 function parseNissanResults(html: string): RecallInfo[] {
   const $ = cheerio.load(html);
   const recalls: RecallInfo[] = [];
-  const bodyText = $('body').text();
-
-  // リコールなしの場合
-  if (bodyText.includes('該当するリコールはありません') ||
-      bodyText.includes('対象車両はありません') ||
-      bodyText.includes('該当なし') ||
-      bodyText.includes('対象車両と検索されませんでした')) {
-    return [];
-  }
 
   let recallIndex = 0;
 

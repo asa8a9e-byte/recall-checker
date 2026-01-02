@@ -76,14 +76,6 @@ export async function checkToyotaRecall(chassisNumber: string): Promise<RecallCh
 function parseRecallResults(html: string, chassisNumber: string): RecallInfo[] {
   const $ = cheerio.load(html);
   const recalls: RecallInfo[] = [];
-  const bodyText = $('body').text();
-
-  // リコールなしメッセージのチェック
-  if (bodyText.includes('リコール等の対象はなく') ||
-      bodyText.includes('修理のためにご入庫いただく必要はありません') ||
-      bodyText.includes('該当するリコール等はありません')) {
-    return [];
-  }
 
   // リコール詳細リンクを探す（toyota.jp/recall/YYYY/MMDD.html形式）
   $('a[href*="/recall/"]').each((index, element) => {
@@ -95,9 +87,10 @@ function parseRecallResults(html: string, chassisNumber: string): RecallInfo[] {
     if (href.match(/\/recall\/\d{4}\/\d+\.html/) && text.length > 5) {
       const fullUrl = href.startsWith('http') ? href : `https://toyota.jp${href}`;
 
-      // 親要素から日付を取得
+      // 親要素から日付と実施状況を取得
       const $row = $link.closest('tr');
       const dateText = $row.find('td:first-child').text().trim();
+      const rowText = $row.text();
 
       recalls.push({
         id: `toyota-${index}`,
@@ -105,7 +98,7 @@ function parseRecallResults(html: string, chassisNumber: string): RecallInfo[] {
         title: text,
         description: fullUrl,
         severity: determineSeverity(text),
-        status: bodyText.includes('実施済') ? 'completed' : 'pending',
+        status: rowText.includes('実施済') ? 'completed' : 'pending',
         publishedAt: dateText || new Date().toISOString().split('T')[0]
       });
     }
@@ -122,6 +115,7 @@ function parseRecallResults(html: string, chassisNumber: string): RecallInfo[] {
       if (cells.length >= 2) {
         const title = $(cells[1]).text().trim();
         const dateText = $(cells[0]).text().trim();
+        const rowText = $row.text();
 
         if (title && title.length > 3) {
           recalls.push({
@@ -130,7 +124,7 @@ function parseRecallResults(html: string, chassisNumber: string): RecallInfo[] {
             title,
             description: '',
             severity: determineSeverity(title),
-            status: bodyText.includes('実施済') ? 'completed' : 'pending',
+            status: rowText.includes('実施済') ? 'completed' : 'pending',
             publishedAt: dateText || new Date().toISOString().split('T')[0]
           });
         }
@@ -139,17 +133,23 @@ function parseRecallResults(html: string, chassisNumber: string): RecallInfo[] {
   }
 
   // それでも見つからないが、リコール対象の可能性がある場合
-  if (recalls.length === 0 && bodyText.includes('リコール') &&
-      !bodyText.includes('対象はなく') && !bodyText.includes('該当するリコール等はありません')) {
-    recalls.push({
-      id: 'toyota-possible',
-      recallId: `T${Date.now()}`,
-      title: 'リコール対象の可能性があります',
-      description: '',
-      severity: 'medium',
-      status: 'pending',
-      publishedAt: new Date().toISOString().split('T')[0]
-    });
+  if (recalls.length === 0) {
+    const bodyText = $('body').text();
+    // 明確にリコール情報がある場合のみフォールバック
+    if (bodyText.includes('リコール') &&
+        !bodyText.includes('リコール等の対象はなく') &&
+        !bodyText.includes('該当するリコール等はありません') &&
+        !bodyText.includes('修理のためにご入庫いただく必要はありません')) {
+      recalls.push({
+        id: 'toyota-possible',
+        recallId: `T${Date.now()}`,
+        title: 'リコール対象の可能性があります',
+        description: '',
+        severity: 'medium',
+        status: 'pending',
+        publishedAt: new Date().toISOString().split('T')[0]
+      });
+    }
   }
 
   return recalls;

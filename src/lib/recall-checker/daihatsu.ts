@@ -70,14 +70,6 @@ export async function checkDaihatsuRecall(chassisNumber: string): Promise<Recall
 function parseDaihatsuResults(html: string): RecallInfo[] {
   const $ = cheerio.load(html);
   const recalls: RecallInfo[] = [];
-  const bodyText = $('body').text();
-
-  // リコールなしチェック
-  if (bodyText.includes('対象項目なし') ||
-      bodyText.includes('対象ではありません') ||
-      bodyText.includes('該当なし')) {
-    return [];
-  }
 
   let recallIndex = 0;
 
@@ -153,17 +145,23 @@ function parseDaihatsuResults(html: string): RecallInfo[] {
     });
   }
 
-  // 検索結果があるがパースできない場合
-  if (recalls.length === 0 && bodyText.includes('検索結果') && !bodyText.includes('対象項目なし')) {
-    recalls.push({
-      id: 'daihatsu-possible',
-      recallId: `D${Date.now()}`,
-      title: 'リコール等情報があります',
-      description: `ダイハツ公式サイトで詳細を確認: ${DAIHATSU_RECALL_URL}`,
-      severity: 'medium',
-      status: 'pending',
-      publishedAt: new Date().toISOString().split('T')[0]
-    });
+  // パースできなかった場合のフォールバック
+  // Note: "対象項目なし"はページのラベルにも含まれることがあるため、
+  // テーブルの中身を見てリコールを判断するべき
+  if (recalls.length === 0) {
+    const bodyText = $('body').text();
+    // 明確に「リコール対象」と書かれている場合のみフォールバック
+    if (bodyText.includes('未改修') || (bodyText.includes('改善対策') && !bodyText.match(/対象項目なし\s*$/m))) {
+      recalls.push({
+        id: 'daihatsu-possible',
+        recallId: `D${Date.now()}`,
+        title: 'リコール等情報があります',
+        description: `ダイハツ公式サイトで詳細を確認: ${DAIHATSU_RECALL_URL}`,
+        severity: 'medium',
+        status: 'pending',
+        publishedAt: new Date().toISOString().split('T')[0]
+      });
+    }
   }
 
   return recalls;

@@ -72,15 +72,6 @@ export async function checkHondaRecall(chassisNumber: string): Promise<RecallChe
 function parseHondaResults(html: string): RecallInfo[] {
   const $ = cheerio.load(html);
   const recalls: RecallInfo[] = [];
-  const bodyText = $('body').text();
-
-  // リコールなしのチェック
-  if (bodyText.includes('リコールや改善対策の実施履歴はございません') ||
-      bodyText.includes('該当なし') ||
-      bodyText.includes('対象外') ||
-      bodyText.includes('対象車両ではありません')) {
-    return [];
-  }
 
   let recallIndex = 0;
 
@@ -145,16 +136,22 @@ function parseHondaResults(html: string): RecallInfo[] {
   }
 
   // 未実施リコールがある場合のフォールバック
-  if (recalls.length === 0 && (bodyText.includes('未実施') || bodyText.includes('リコール対象'))) {
-    recalls.push({
-      id: 'honda-unknown',
-      recallId: `H${Date.now()}`,
-      title: 'リコール対象です',
-      description: `ホンダ公式サイトで詳細を確認: ${HONDA_FORM_URL}?fn=link.disp`,
-      severity: 'high',
-      status: 'pending',
-      publishedAt: new Date().toISOString().split('T')[0]
-    });
+  if (recalls.length === 0) {
+    const bodyText = $('body').text();
+    // 明確にリコール情報がある場合のみフォールバック
+    if ((bodyText.includes('未実施') || bodyText.includes('リコール対象')) &&
+        !bodyText.includes('リコールや改善対策の実施履歴はございません') &&
+        !bodyText.includes('対象車両ではありません')) {
+      recalls.push({
+        id: 'honda-unknown',
+        recallId: `H${Date.now()}`,
+        title: 'リコール対象です',
+        description: `ホンダ公式サイトで詳細を確認: ${HONDA_FORM_URL}?fn=link.disp`,
+        severity: 'high',
+        status: 'pending',
+        publishedAt: new Date().toISOString().split('T')[0]
+      });
+    }
   }
 
   return recalls;

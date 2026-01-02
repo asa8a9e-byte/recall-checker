@@ -97,16 +97,6 @@ export async function checkSubaruRecall(chassisNumber: string): Promise<RecallCh
 function parseSubaruResults(html: string): RecallInfo[] {
   const $ = cheerio.load(html);
   const recalls: RecallInfo[] = [];
-  const bodyText = $('body').text();
-
-  // リコールなしのチェック
-  if (bodyText.includes('対象のリコール等はございません') ||
-      bodyText.includes('該当するリコール等はございません') ||
-      bodyText.includes('該当なし') ||
-      bodyText.includes('対象外') ||
-      bodyText.includes('ご案内はございません')) {
-    return [];
-  }
 
   let recallIndex = 0;
 
@@ -179,18 +169,22 @@ function parseSubaruResults(html: string): RecallInfo[] {
   }
 
   // それでも見つからないが、リコール対象の可能性がある場合
-  if (recalls.length === 0 &&
-      (bodyText.includes('ご案内がございます') || bodyText.includes('未実施')) &&
-      !bodyText.includes('ございません')) {
-    recalls.push({
-      id: 'subaru-possible',
-      recallId: `S${Date.now()}`,
-      title: 'リコール対象の可能性があります',
-      description: `公式サイトで詳細を確認してください: ${SUBARU_RECALL_URL}`,
-      severity: 'medium',
-      status: 'pending',
-      publishedAt: new Date().toISOString().split('T')[0]
-    });
+  if (recalls.length === 0) {
+    const bodyText = $('body').text();
+    // 明確にリコール情報がある場合のみフォールバック
+    if ((bodyText.includes('ご案内がございます') || bodyText.includes('未実施')) &&
+        !bodyText.includes('対象のリコール等はございません') &&
+        !bodyText.includes('該当するリコール等はございません')) {
+      recalls.push({
+        id: 'subaru-possible',
+        recallId: `S${Date.now()}`,
+        title: 'リコール対象の可能性があります',
+        description: `公式サイトで詳細を確認してください: ${SUBARU_RECALL_URL}`,
+        severity: 'medium',
+        status: 'pending',
+        publishedAt: new Date().toISOString().split('T')[0]
+      });
+    }
   }
 
   return recalls;

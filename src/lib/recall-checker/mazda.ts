@@ -73,18 +73,6 @@ function parseMazdaResults(html: string): RecallInfo[] {
   const recalls: RecallInfo[] = [];
   const bodyText = $('body').text();
 
-  // リコールなしチェック
-  if (bodyText.includes('該当するリコール等の情報はありませんでした') ||
-      bodyText.includes('該当する情報3件') === false && bodyText.includes('該当する情報') === false &&
-      !bodyText.includes('リコール・改善対策情報') ||
-      bodyText.includes('該当なし')) {
-
-    // ただし「該当する情報」がある場合は除外しない
-    if (!bodyText.includes('該当する情報')) {
-      return [];
-    }
-  }
-
   let recallIndex = 0;
 
   // テキストベースでパース（マツダの結果ページ形式）
