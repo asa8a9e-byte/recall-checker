@@ -207,7 +207,7 @@ export async function fetchModelTypes(models?: VehicleModelWithManufacturer[]): 
 
   } catch (error) {
     console.error('型式一覧取得エラー:', error);
-    throw error;
+    return 0;
   } finally {
     await browser.close();
   }
