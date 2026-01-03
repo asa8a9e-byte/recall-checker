@@ -1,7 +1,6 @@
 // src/lib/recall-checker/mlit.ts
 // 国土交通省サイトでのリコール検索
 
-import { chromium } from 'playwright';
 import * as cheerio from 'cheerio';
 import { RecallCheckResult, RecallInfo } from '@/types';
 
@@ -11,10 +10,31 @@ export async function checkMLITRecall(
   vehicleName: string,
   modelType: string
 ): Promise<RecallCheckResult> {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  // Vercel/Lambda環境ではpuppeteer-core + chromiumを使用、ローカルでは通常のpuppeteerを使用
+  const isProduction = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+  let browser;
+
+  if (isProduction) {
+    // 本番環境: puppeteer-core + @sparticuz/chromium
+    const puppeteerCore = (await import('puppeteer-core')).default;
+    const chromium = (await import('@sparticuz/chromium')).default;
+
+    browser = await puppeteerCore.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+  } else {
+    // ローカル開発: 通常のpuppeteer（Chromeバンドル版）
+    const puppeteer = (await import('puppeteer')).default;
+
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+  }
 
   const page = await browser.newPage();
 
@@ -25,7 +45,7 @@ export async function checkMLITRecall(
     const searchUrl = `https://renrakuda.mlit.go.jp/renrakuda/ris-search-result.html?selCarTp=1&lstCarNo=&txtMdlNm=${encodeURIComponent(modelType)}&txtFrDat=&txtToDat=`;
     console.log(`検索URL: ${searchUrl}`);
 
-    await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
     await page.waitForTimeout(2000);
 
     // 結果ページのHTMLを確認
@@ -61,7 +81,7 @@ export async function checkMLITRecall(
 
         // リンクをクリックしてページ遷移を待つ
         await Promise.all([
-          page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }),
+          page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
           page.click(`a[onclick*="goToDetailPage(${detailId})"]`)
         ]);
 
@@ -101,7 +121,7 @@ export async function checkMLITRecall(
         // 次のリコールのために検索結果ページに戻る
         if (i < recallLinks.length - 1) {
           console.log('検索結果ページに戻ります...');
-          await page.goBack({ waitUntil: 'networkidle', timeout: 15000 });
+          await page.goBack({ waitUntil: 'networkidle2', timeout: 15000 });
           await page.waitForTimeout(1000);
         }
 
@@ -109,7 +129,7 @@ export async function checkMLITRecall(
         console.error(`詳細取得エラー (${link.text}):`, error);
         // エラーが発生しても検索結果ページに戻る
         try {
-          await page.goBack({ waitUntil: 'networkidle', timeout: 10000 });
+          await page.goBack({ waitUntil: 'networkidle2', timeout: 10000 });
         } catch (backError) {
           console.error('検索結果ページへの復帰に失敗:', backError);
         }
