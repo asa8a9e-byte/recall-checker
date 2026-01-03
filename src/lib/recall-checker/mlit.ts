@@ -10,38 +10,13 @@ export async function checkMLITRecall(
   vehicleName: string,
   modelType: string
 ): Promise<RecallCheckResult> {
-  // 一時的に無効化：Puppeteer + Chromiumが重すぎてVercelのサーバーレス制限を超える
-  // TODO: 将来的に外部APIまたは軽量な代替手段を検討
-
-  console.log(`国交省リコール検索（一時的に無効化中）: ${vehicleName} / ${modelType}`);
-
-  return {
-    chassisNumber: '',
-    maker: vehicleName,
-    model: modelType,
-    hasRecall: false,
-    recalls: [{
-      id: 'mlit-temporarily-disabled',
-      recallId: 'DISABLED',
-      title: '国交省サイトでの自動検索は準備中です',
-      description: `現在、国土交通省サイトでの自動検索機能は準備中です。\n\n恐れ入りますが、以下のサイトで直接ご確認ください：\n${MLIT_RECALL_URL}\n\n検索条件：\n・車名：${vehicleName}\n・型式：${modelType}`,
-      severity: 'medium',
-      status: 'pending',
-      publishedAt: new Date().toISOString().split('T')[0]
-    }],
-    checkedAt: new Date().toISOString(),
-    cached: false
-  };
-}
-
-// 以下、Puppeteerを使用する実装（一時的にコメントアウト）
-/*
-
+  // Vercel/Lambda環境ではpuppeteer-core + chromiumを使用、ローカルでは通常のpuppeteerを使用
   const isProduction = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
   let browser;
 
   if (isProduction) {
+    // 本番環境: puppeteer-core + @sparticuz/chromium
     const puppeteerCore = (await import('puppeteer-core')).default;
     const chromium = (await import('@sparticuz/chromium')).default;
 
@@ -52,6 +27,7 @@ export async function checkMLITRecall(
       headless: chromium.headless,
     });
   } else {
+    // ローカル開発: 通常のpuppeteer（Chromeバンドル版）
     const puppeteer = (await import('puppeteer')).default;
 
     browser = await puppeteer.launch({
@@ -395,5 +371,3 @@ function parseDetailPage(html: string, recallId: string, detailUrl?: string): Re
     return null;
   }
 }
-
-*/ // ← Puppeteerコードのブロックコメント終了
