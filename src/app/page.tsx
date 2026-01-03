@@ -401,7 +401,12 @@ export default function Home() {
                         type="text"
                         value={modelQuery}
                         onChange={(e) => setModelQuery(e.target.value)}
-                        onFocus={() => filteredModels.length > 0 && setShowModelDropdown(true)}
+                        onFocus={() => {
+                          // 入力があり、まだ車種が選択されていない場合にドロップダウンを表示
+                          if (modelQuery.length > 0 && !selectedModel) {
+                            setShowModelDropdown(true);
+                          }
+                        }}
                         placeholder="車種名を入力（例：ロードスター、ハイゼットカーゴ）"
                         className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm"
                       />
@@ -578,30 +583,45 @@ export default function Home() {
             )}
 
             {/* 検索結果 - 検索窓のすぐ下に表示 */}
-            {searchResult && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className={`p-5 ${searchResult.hasRecall ? 'bg-red-50' : 'bg-emerald-50'}`}>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      searchResult.hasRecall ? 'bg-red-100' : 'bg-emerald-100'
-                    }`}>
-                      {searchResult.hasRecall ? (
-                        <AlertCircle className="w-6 h-6 text-red-600" />
-                      ) : (
-                        <CheckCircle className="w-6 h-6 text-emerald-600" />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className={`font-semibold ${searchResult.hasRecall ? 'text-red-900' : 'text-emerald-900'}`}>
-                        {searchResult.hasRecall ? 'リコール対象です' : 'リコール対象ではありません'}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-0.5">
-                        {searchResult.maker} / {searchResult.chassisNumber}
-                        {searchResult.cached && <span className="text-gray-400 ml-2">(キャッシュ)</span>}
-                      </p>
+            {searchResult && (() => {
+              // 「準備中」メッセージかチェック
+              const isTemporarilyDisabled = searchResult.recalls?.some(r => r.recallId === 'DISABLED');
+
+              return (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className={`p-5 ${
+                    isTemporarilyDisabled ? 'bg-blue-50' :
+                    searchResult.hasRecall ? 'bg-red-50' : 'bg-emerald-50'
+                  }`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        isTemporarilyDisabled ? 'bg-blue-100' :
+                        searchResult.hasRecall ? 'bg-red-100' : 'bg-emerald-100'
+                      }`}>
+                        {isTemporarilyDisabled ? (
+                          <Search className="w-6 h-6 text-blue-600" />
+                        ) : searchResult.hasRecall ? (
+                          <AlertCircle className="w-6 h-6 text-red-600" />
+                        ) : (
+                          <CheckCircle className="w-6 h-6 text-emerald-600" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className={`font-semibold ${
+                          isTemporarilyDisabled ? 'text-blue-900' :
+                          searchResult.hasRecall ? 'text-red-900' : 'text-emerald-900'
+                        }`}>
+                          {isTemporarilyDisabled ? '国交省サイトで検索してください' :
+                           searchResult.hasRecall ? 'リコール対象です' : 'リコール対象ではありません'}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-0.5">
+                          {searchResult.maker} {searchResult.model && `/ ${searchResult.model}`}
+                          {searchResult.chassisNumber && ` / ${searchResult.chassisNumber}`}
+                          {searchResult.cached && <span className="text-gray-400 ml-2">(キャッシュ)</span>}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
                 {searchResult.recalls && searchResult.recalls.length > 0 && (
                   <div className="p-5">
@@ -696,7 +716,8 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-            )}
+            );
+          })()}
 
             {/* リコールニュースポータル */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
