@@ -26,7 +26,6 @@ export async function checkMLITRecall(
       defaultViewport: { width: 1280, height: 720 },
       executablePath: await chromium.executablePath(),
       headless: true,
-      ignoreHTTPSErrors: true,
     });
   } else {
     // ローカル開発: 通常のpuppeteer（Chromeバンドル版）
