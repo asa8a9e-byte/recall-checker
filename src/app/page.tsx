@@ -115,6 +115,15 @@ export default function Home() {
 
   // 車種検索（インクリメンタル）
   useEffect(() => {
+    // modelQueryが空になったら、選択状態をリセット
+    if (modelQuery.length === 0) {
+      setSelectedModel(null);
+      setSelectedType('');
+      setFilteredModels([]);
+      setShowModelDropdown(false);
+      return;
+    }
+
     // 既に車種が選択されている場合は検索しない
     if (selectedModel) {
       setFilteredModels([]);
@@ -144,9 +153,6 @@ export default function Home() {
       // デバウンス処理（300ms待機）
       const timer = setTimeout(searchModels, 300);
       return () => clearTimeout(timer);
-    } else {
-      setFilteredModels([]);
-      setShowModelDropdown(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedManufacturer, modelQuery]);
@@ -597,10 +603,10 @@ export default function Home() {
                   </div>
                 </div>
 
-                {searchResult.hasRecall && searchResult.recalls.length > 0 && (
+                {searchResult.recalls && searchResult.recalls.length > 0 && (
                   <div className="p-5">
                     <div className="text-xs text-gray-400 tracking-wider mb-4">
-                      リコール情報 {searchResult.recalls.length}件
+                      {searchResult.hasRecall ? `リコール情報 ${searchResult.recalls.length}件` : '検索結果'}
                     </div>
                     <div className="space-y-3">
                       {searchResult.recalls.map((recall, idx) => (
