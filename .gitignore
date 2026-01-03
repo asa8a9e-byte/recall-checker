@@ -30,3 +30,6 @@ Thumbs.db
 # Test
 coverage/
 .vercel
+scrape-all.log
+.env.backup
+data-export.json
