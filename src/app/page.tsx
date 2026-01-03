@@ -119,6 +119,7 @@ export default function Home() {
     if (modelQuery.length === 0) {
       setSelectedModel(null);
       setSelectedType('');
+      setSelectedManufacturer('');
       setFilteredModels([]);
       setShowModelDropdown(false);
       return;
