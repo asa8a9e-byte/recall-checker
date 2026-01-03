@@ -20,10 +20,13 @@ export async function checkMLITRecall(
     const puppeteerCore = (await import('puppeteer-core')).default;
     const chromium = (await import('@sparticuz/chromium')).default;
 
+    // Graphics modeを無効化してサイズを削減
+    chromium.setGraphicsMode = false;
+
     browser = await puppeteerCore.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage'],
       defaultViewport: { width: 1920, height: 1080 },
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath('/var/task/node_modules/@sparticuz/chromium/bin'),
       headless: true,
     });
   } else {
