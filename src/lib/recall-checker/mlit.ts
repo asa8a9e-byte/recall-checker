@@ -32,8 +32,10 @@ export async function checkMLITRecall(
     checkedAt: new Date().toISOString(),
     cached: false
   };
+}
 
-  /* 以下、Puppeteerを使用する実装（一時的にコメントアウト）
+// 以下、Puppeteerを使用する実装（一時的にコメントアウト）
+/*
 
   const isProduction = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
