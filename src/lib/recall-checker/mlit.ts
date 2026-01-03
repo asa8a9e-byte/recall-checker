@@ -393,3 +393,5 @@ function parseDetailPage(html: string, recallId: string, detailUrl?: string): Re
     return null;
   }
 }
+
+*/ // ← Puppeteerコードのブロックコメント終了
