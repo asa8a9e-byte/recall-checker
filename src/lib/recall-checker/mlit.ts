@@ -21,10 +21,10 @@ export async function checkMLITRecall(
     const chromium = (await import('@sparticuz/chromium')).default;
 
     browser = await puppeteerCore.launch({
-      args: [...chromium.args, '--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage'],
-      defaultViewport: { width: 1920, height: 1080 },
+      args: chromium.args,
+      defaultViewport: { width: 1280, height: 720 },
       executablePath: await chromium.executablePath(),
-      headless: true,
+      headless: 'shell',
     });
   } else {
     // ローカル開発: 通常のpuppeteer（Chromeバンドル版）
