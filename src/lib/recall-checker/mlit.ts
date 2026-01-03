@@ -46,7 +46,7 @@ export async function checkMLITRecall(
     console.log(`検索URL: ${searchUrl}`);
 
     await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // 結果ページのHTMLを確認
     const html = await page.content();
@@ -122,7 +122,7 @@ export async function checkMLITRecall(
         if (i < recallLinks.length - 1) {
           console.log('検索結果ページに戻ります...');
           await page.goBack({ waitUntil: 'networkidle2', timeout: 15000 });
-          await page.waitForTimeout(1000);
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
       } catch (error) {
