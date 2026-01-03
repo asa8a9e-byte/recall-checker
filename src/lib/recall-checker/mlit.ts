@@ -18,13 +18,15 @@ export async function checkMLITRecall(
   if (isProduction) {
     // 本番環境: puppeteer-core + @sparticuz/chromium
     const puppeteerCore = (await import('puppeteer-core')).default;
-    const chromium = (await import('@sparticuz/chromium')).default;
+    const chromiumPkg = await import('@sparticuz/chromium');
+    const chromium = chromiumPkg.default;
 
     browser = await puppeteerCore.launch({
       args: chromium.args,
       defaultViewport: { width: 1280, height: 720 },
       executablePath: await chromium.executablePath(),
-      headless: 'shell',
+      headless: true,
+      ignoreHTTPSErrors: true,
     });
   } else {
     // ローカル開発: 通常のpuppeteer（Chromeバンドル版）
