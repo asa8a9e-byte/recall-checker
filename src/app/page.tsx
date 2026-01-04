@@ -49,6 +49,23 @@ export default function Home() {
   const [recallNews, setRecallNews] = useState<RecallNews[]>([]);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
 
+  // 国交省届出日範囲
+  const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string } | null>(null);
+
+  // 国交省最新届出
+  interface RecallNotice {
+    date: string;
+    makers: Array<{ name: string; url: string }>;
+    type: 'recall' | 'improvement';
+  }
+  interface MonthlyNotices {
+    month: string;
+    year: string;
+    notices: RecallNotice[];
+  }
+  const [latestNotices, setLatestNotices] = useState<MonthlyNotices | null>(null);
+  const [isLoadingNotices, setIsLoadingNotices] = useState(true);
+
   // 在庫読み込み
   const loadInventory = async () => {
     try {
@@ -93,11 +110,42 @@ export default function Home() {
     }
   };
 
+  // 国交省届出日範囲を取得
+  const loadDateRange = async () => {
+    try {
+      const res = await fetch('/api/recall/date-range');
+      const data = await res.json();
+      if (data.success && data.data) {
+        setDateRange(data.data);
+      }
+    } catch (error) {
+      console.error('届出日範囲取得エラー:', error);
+    }
+  };
+
+  // 国交省最新届出を取得
+  const loadLatestNotices = async () => {
+    setIsLoadingNotices(true);
+    try {
+      const res = await fetch('/api/recall/latest-notices');
+      const data = await res.json();
+      if (data.success && data.data) {
+        setLatestNotices(data.data);
+      }
+    } catch (error) {
+      console.error('最新届出取得エラー:', error);
+    } finally {
+      setIsLoadingNotices(false);
+    }
+  };
+
   useEffect(() => {
     loadInventory();
     loadAlerts();
     loadRecallNews();
     loadManufacturers();
+    loadDateRange();
+    loadLatestNotices();
   }, []);
 
   // メーカー一覧取得
@@ -393,6 +441,14 @@ export default function Home() {
             {/* 車種・型式検索フォーム */}
             {searchMode === 'model' && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                {/* 国交省届出日範囲表示 */}
+                {dateRange && dateRange.startDate && dateRange.endDate && (
+                  <div className="mb-4 px-4 py-3 bg-gray-50 rounded-xl text-sm text-gray-600">
+                    <span className="text-gray-400">(※1)</span>
+                    {dateRange.startDate} ～ {dateRange.endDate}の届出日の中から検索します。
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   {/* 車種名検索（インクリメンタル） */}
                   <div className="relative">
@@ -720,63 +776,118 @@ export default function Home() {
             );
           })()}
 
-            {/* リコールニュースポータル */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-sm font-semibold text-gray-800 tracking-wider">最新リコール情報</h2>
-                <span className="text-xs text-gray-500">各メーカー公式サイトより</span>
-              </div>
-              {isLoadingNews ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                  <span className="ml-2 text-sm text-gray-400">読み込み中...</span>
+            {/* 車種検索モード: 国交省届出一覧 / 車台番号モード: メーカー別リコールニュース */}
+            {searchMode === 'model' ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-sm font-semibold text-gray-800 tracking-wider">
+                    {latestNotices ? `${latestNotices.year} ${latestNotices.month}のリコール届出` : '最新リコール届出'}
+                  </h2>
+                  <a
+                    href="https://www.mlit.go.jp/jidosha/recall.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
+                  >
+                    国土交通省
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
-              ) : recallNews.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {MAKERS.map(maker => {
-                    const makerNews = recallNews.filter(n => n.maker === maker);
-                    if (makerNews.length === 0) return null;
-                    return (
-                      <div key={maker} className="group">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="w-1.5 h-4 bg-gray-900 rounded-full"></span>
-                          <span className="text-sm font-semibold text-gray-800">{maker}</span>
+                {isLoadingNotices ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="ml-2 text-sm text-gray-400">読み込み中...</span>
+                  </div>
+                ) : latestNotices && latestNotices.notices.length > 0 ? (
+                  <div className="space-y-3">
+                    {latestNotices.notices.filter(n => n.type === 'recall').map((notice, idx) => (
+                      <div key={idx} className="p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <div className="text-sm font-medium text-gray-600 min-w-[50px]">
+                            {notice.date}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {notice.makers.map((maker, midx) => (
+                              <a
+                                key={midx}
+                                href={maker.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all inline-flex items-center gap-1"
+                              >
+                                {maker.name}
+                                <ExternalLink className="w-3 h-3 text-gray-400" />
+                              </a>
+                            ))}
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          {makerNews.slice(0, 3).map((news, idx) => (
-                            <a
-                              key={idx}
-                              href={news.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200 group/item"
-                            >
-                              <div className="text-sm text-gray-700 line-clamp-2 group-hover/item:text-gray-900 transition-colors">{news.title}</div>
-                              {news.date && (
-                                <div className="text-xs text-gray-500 mt-1.5 font-medium">{news.date}</div>
-                              )}
-                            </a>
-                          ))}
-                        </div>
-                        <a
-                          href={MAKER_RECALL_URLS[maker as Maker]}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-3 text-xs text-gray-500 hover:text-gray-700 font-medium transition-colors"
-                        >
-                          すべて見る
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-sm text-gray-400">
+                    届出情報を取得できませんでした
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-sm font-semibold text-gray-800 tracking-wider">最新リコール情報</h2>
+                  <span className="text-xs text-gray-500">各メーカー公式サイトより</span>
                 </div>
-              ) : (
-                <div className="text-center py-12 text-sm text-gray-400">
-                  リコール情報を取得できませんでした
-                </div>
-              )}
-            </div>
+                {isLoadingNews ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="ml-2 text-sm text-gray-400">読み込み中...</span>
+                  </div>
+                ) : recallNews.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {MAKERS.map(maker => {
+                      const makerNews = recallNews.filter(n => n.maker === maker);
+                      if (makerNews.length === 0) return null;
+                      return (
+                        <div key={maker} className="group">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="w-1.5 h-4 bg-gray-900 rounded-full"></span>
+                            <span className="text-sm font-semibold text-gray-800">{maker}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {makerNews.slice(0, 3).map((news, idx) => (
+                              <a
+                                key={idx}
+                                href={news.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200 group/item"
+                              >
+                                <div className="text-sm text-gray-700 line-clamp-2 group-hover/item:text-gray-900 transition-colors">{news.title}</div>
+                                {news.date && (
+                                  <div className="text-xs text-gray-500 mt-1.5 font-medium">{news.date}</div>
+                                )}
+                              </a>
+                            ))}
+                          </div>
+                          <a
+                            href={MAKER_RECALL_URLS[maker as Maker]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 mt-3 text-xs text-gray-500 hover:text-gray-700 font-medium transition-colors"
+                          >
+                            すべて見る
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-sm text-gray-400">
+                    リコール情報を取得できませんでした
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
