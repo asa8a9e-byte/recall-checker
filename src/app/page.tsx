@@ -371,261 +371,280 @@ export default function Home() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* 単発チェックタブ */}
         {activeTab === 'check' && (
-          <div className="space-y-6">
-            {/* 検索モード切り替え */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleSearchModeChange('model')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  searchMode === 'model'
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                車種・型式で検索
-              </button>
-              <button
-                onClick={() => handleSearchModeChange('chassis')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  searchMode === 'chassis'
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                車台番号で検索
-              </button>
-            </div>
+          <div className="space-y-8">
+            {/* メイン検索カード */}
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 shadow-xl">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">リコール情報を検索</h2>
+                <p className="text-gray-400 text-sm">車種名または車台番号で検索できます</p>
+              </div>
 
-            {/* 車台番号検索フォーム */}
-            {searchMode === 'chassis' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="flex flex-col md:flex-row gap-3">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      placeholder="車台番号を入力（例：S700B-0005456）"
-                      value={chassisNumber}
-                      onChange={(e) => setChassisNumber(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                      className="w-full px-4 py-3.5 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 focus:bg-white outline-none text-base font-mono text-gray-800 placeholder:text-gray-400 transition-all"
-                    />
+              {/* 検索モード切り替え */}
+              <div className="flex justify-center gap-2 mb-8">
+                <button
+                  onClick={() => handleSearchModeChange('model')}
+                  className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
+                    searchMode === 'model'
+                      ? 'bg-white text-gray-900 shadow-lg'
+                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  車種・型式で検索
+                </button>
+                <button
+                  onClick={() => handleSearchModeChange('chassis')}
+                  className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
+                    searchMode === 'chassis'
+                      ? 'bg-white text-gray-900 shadow-lg'
+                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  車台番号で検索
+                </button>
+              </div>
+
+              {/* 車台番号検索フォーム */}
+              {searchMode === 'chassis' && (
+                <div className="bg-white/10 backdrop-blur rounded-2xl p-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-300 mb-2">車台番号</label>
+                      <input
+                        type="text"
+                        placeholder="例：S700B-0005456"
+                        value={chassisNumber}
+                        onChange={(e) => setChassisNumber(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        className="w-full px-5 py-4 bg-white border-2 border-transparent rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 outline-none text-lg font-mono text-gray-800 placeholder:text-gray-400 transition-all shadow-sm"
+                      />
+                    </div>
+                    <div className="md:w-48">
+                      <label className="block text-xs font-medium text-gray-300 mb-2">メーカー</label>
+                      <select
+                        value={selectedMaker}
+                        onChange={(e) => setSelectedMaker(e.target.value)}
+                        className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 outline-none text-base cursor-pointer transition-all shadow-sm ${
+                          selectedMaker
+                            ? 'bg-white border-transparent text-gray-700'
+                            : 'bg-amber-50 border-amber-200 text-amber-700'
+                        }`}
+                      >
+                        <option value="">選択してください</option>
+                        {MAKERS.map(maker => (
+                          <option key={maker} value={maker}>{maker}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <select
-                    value={selectedMaker}
-                    onChange={(e) => setSelectedMaker(e.target.value)}
-                    className={`px-4 py-3.5 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer ${
-                      selectedMaker ? 'bg-gray-50 text-gray-700' : 'bg-amber-50 text-amber-700'
-                    }`}
-                  >
-                    <option value="">メーカーを選択</option>
-                    {MAKERS.map(maker => (
-                      <option key={maker} value={maker}>{maker}</option>
-                    ))}
-                  </select>
                   <button
                     onClick={handleSearch}
                     disabled={isSearching || !chassisNumber.trim() || !selectedMaker}
-                    className="px-6 py-3.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 min-w-[100px]"
+                    className="w-full mt-4 px-6 py-4 bg-blue-500 text-white text-base font-semibold rounded-xl hover:bg-blue-600 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
                   >
                     {isSearching ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : '検索'}
-                  </button>
-                </div>
-                <p className="text-gray-500 text-xs mt-3">
-                  対応メーカー：トヨタ・日産・ホンダ・マツダ・スバル・ダイハツ
-                </p>
-              </div>
-            )}
-
-            {/* 車種・型式検索フォーム */}
-            {searchMode === 'model' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                {/* 国交省届出日範囲表示 */}
-                {dateRange && dateRange.startDate && dateRange.endDate && (
-                  <div className="mb-4 px-4 py-3 bg-gray-50 rounded-xl text-sm text-gray-600">
-                    <span className="text-gray-400">(※1)</span>
-                    {dateRange.startDate} ～ {dateRange.endDate}の届出日の中から検索します。
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {/* 車種名検索（インクリメンタル） */}
-                  <div className="relative">
-                    <label className="block text-xs font-medium text-gray-500 mb-2">車種名</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={modelQuery}
-                        onChange={(e) => setModelQuery(e.target.value)}
-                        onFocus={() => {
-                          // 入力があり、まだ車種が選択されていない場合にドロップダウンを表示
-                          if (modelQuery.length > 0 && !selectedModel) {
-                            setShowModelDropdown(true);
-                          }
-                        }}
-                        placeholder="車種名を入力（例：ロードスター、ハイゼットカーゴ）"
-                        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm"
-                      />
-                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-
-                    {/* 候補リスト */}
-                    {showModelDropdown && filteredModels.length > 0 && (
-                      <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                        {filteredModels.map(model => (
-                          <button
-                            key={model.id}
-                            onClick={() => {
-                              setSelectedModel(model);
-                              setModelQuery(model.name);
-                              setShowModelDropdown(false);
-                              // メーカーも自動選択
-                              if (model.manufacturer) {
-                                setSelectedManufacturer(model.manufacturerId);
-                              }
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-800">{model.name}</div>
-                                {model.nameKana && (
-                                  <div className="text-xs text-gray-500 mt-0.5">{model.nameKana}</div>
-                                )}
-                              </div>
-                              {model.manufacturer && (
-                                <div className="text-xs text-gray-400 ml-2">
-                                  {model.manufacturer.name}
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {selectedModel && (
-                      <div className="mt-2 px-3 py-2 bg-emerald-50 rounded-lg text-sm text-emerald-700 flex items-center justify-between">
-                        <span>選択中: {selectedModel.name}</span>
-                        {selectedModel.manufacturer && (
-                          <span className="text-xs">({selectedModel.manufacturer.name})</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* メーカー選択（オプショナル・絞り込み用） */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-2">
-                      メーカーで絞り込み（オプション）
-                    </label>
-                    <select
-                      value={selectedManufacturer}
-                      onChange={(e) => {
-                        setSelectedManufacturer(e.target.value);
-                        setModelQuery('');
-                        setSelectedModel(null);
-                      }}
-                      className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer"
-                    >
-                      <option value="">すべてのメーカー</option>
-                      {manufacturers.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 型式選択 */}
-                  {selectedModel && modelTypes.length > 0 && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-2">
-                        グレード・型式 ({modelTypes.length}件)
-                      </label>
-                      <select
-                        value={selectedType}
-                        onChange={(e) => setSelectedType(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-gray-200 outline-none text-sm cursor-pointer"
-                      >
-                        <option value="">グレード・型式を選択してください</option>
-                        {modelTypes.map(type => {
-                          // グレード名と型式を組み合わせて表示
-                          let displayText = type.typeCode;
-
-                          if (type.gradeName) {
-                            displayText = `${type.gradeName} - ${type.typeCode}`;
-                          }
-
-                          // 追加情報があれば表示
-                          const details = [];
-                          if (type.displacement) details.push(type.displacement);
-                          if (type.transmission) details.push(type.transmission);
-                          if (type.driveSystem) details.push(type.driveSystem);
-
-                          if (details.length > 0) {
-                            displayText += ` (${details.join(', ')})`;
-                          } else if (type.description) {
-                            displayText += ` (${type.description})`;
-                          }
-
-                          return (
-                            <option key={type.id} value={type.typeCode}>
-                              {displayText}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* 型式データがない場合の警告 */}
-                  {selectedModel && modelTypes.length === 0 && (
-                    <div className="px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700">
-                      この車種の型式データはまだ取得されていません。型式データがある車種を選択してください。
-                    </div>
-                  )}
-
-                  {/* 検索ボタン */}
-                  <button
-                    onClick={handleSearch}
-                    disabled={isSearching || !selectedModel || !selectedType}
-                    className="w-full px-6 py-3.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                  >
-                    {isSearching ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>検索中...</span>
-                      </>
+                      <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
-                        <Search className="w-4 h-4" />
-                        リコールを検索
+                        <Search className="w-5 h-5" />
+                        検索する
                       </>
                     )}
                   </button>
+                  <p className="text-gray-400 text-xs mt-4 text-center">
+                    対応メーカー：トヨタ・日産・ホンダ・マツダ・スバル・ダイハツ
+                  </p>
                 </div>
+              )}
 
-                {isSearching && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4">
-                    <div className="flex items-start gap-3">
-                      <Loader2 className="w-5 h-5 animate-spin text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-blue-900 mb-1">
-                          国土交通省データベースから検索中
-                        </p>
-                        <p className="text-xs text-blue-700">
-                          リコール情報の取得には1〜2分程度かかる場合があります。このままお待ちください。
-                        </p>
+              {/* 車種・型式検索フォーム */}
+              {searchMode === 'model' && (
+                <div className="bg-white/10 backdrop-blur rounded-2xl p-6">
+                  <div className="space-y-5">
+                    {/* 車種名検索（メイン入力欄） */}
+                    <div className="relative">
+                      <label className="block text-sm font-semibold text-white mb-3">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs">1</span>
+                          車種名を入力
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={modelQuery}
+                          onChange={(e) => setModelQuery(e.target.value)}
+                          onFocus={() => {
+                            if (modelQuery.length > 0 && !selectedModel) {
+                              setShowModelDropdown(true);
+                            }
+                          }}
+                          placeholder="例：ロードスター、ハイゼットカーゴ、プリウス"
+                          className="w-full px-5 py-4 bg-white border-2 border-transparent rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 outline-none text-lg text-gray-800 placeholder:text-gray-400 transition-all shadow-sm pr-12"
+                        />
+                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      </div>
+
+                      {/* 候補リスト */}
+                      {showModelDropdown && filteredModels.length > 0 && (
+                        <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-100 rounded-xl shadow-2xl max-h-72 overflow-y-auto">
+                          {filteredModels.map(model => (
+                            <button
+                              key={model.id}
+                              onClick={() => {
+                                setSelectedModel(model);
+                                setModelQuery(model.name);
+                                setShowModelDropdown(false);
+                                if (model.manufacturer) {
+                                  setSelectedManufacturer(model.manufacturerId);
+                                }
+                              }}
+                              className="w-full px-5 py-4 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="font-semibold text-gray-800 text-base">{model.name}</div>
+                                  {model.nameKana && (
+                                    <div className="text-sm text-gray-500 mt-0.5">{model.nameKana}</div>
+                                  )}
+                                </div>
+                                {model.manufacturer && (
+                                  <div className="text-sm text-gray-400 ml-3 px-2 py-1 bg-gray-100 rounded">
+                                    {model.manufacturer.name}
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {selectedModel && (
+                        <div className="mt-3 px-4 py-3 bg-emerald-500/20 border border-emerald-400/30 rounded-xl text-emerald-100 flex items-center justify-between">
+                          <span className="font-medium">✓ {selectedModel.name}</span>
+                          {selectedModel.manufacturer && (
+                            <span className="text-sm text-emerald-200">({selectedModel.manufacturer.name})</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* メーカー絞り込み（サブ） */}
+                    <div className="pt-2">
+                      <label className="block text-xs font-medium text-gray-400 mb-2">
+                        メーカーで絞り込み（オプション）
+                      </label>
+                      <select
+                        value={selectedManufacturer}
+                        onChange={(e) => {
+                          setSelectedManufacturer(e.target.value);
+                          setModelQuery('');
+                          setSelectedModel(null);
+                        }}
+                        className="w-full px-4 py-3 bg-white/80 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/30 outline-none text-sm text-gray-700 cursor-pointer"
+                      >
+                        <option value="">すべてのメーカー</option>
+                        {manufacturers.map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 型式選択 */}
+                    {selectedModel && modelTypes.length > 0 && (
+                      <div className="pt-2">
+                        <label className="block text-sm font-semibold text-white mb-3">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs">2</span>
+                            グレード・型式を選択
+                            <span className="text-xs font-normal text-gray-400">({modelTypes.length}件)</span>
+                          </span>
+                        </label>
+                        <select
+                          value={selectedType}
+                          onChange={(e) => setSelectedType(e.target.value)}
+                          className="w-full px-5 py-4 bg-white border-2 border-transparent rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-400/20 outline-none text-base text-gray-800 cursor-pointer transition-all shadow-sm"
+                        >
+                          <option value="">選択してください</option>
+                          {modelTypes.map(type => {
+                            let displayText = type.typeCode;
+
+                            if (type.gradeName) {
+                              displayText = `${type.gradeName} - ${type.typeCode}`;
+                            }
+
+                            const details = [];
+                            if (type.displacement) details.push(type.displacement);
+                            if (type.transmission) details.push(type.transmission);
+                            if (type.driveSystem) details.push(type.driveSystem);
+
+                            if (details.length > 0) {
+                              displayText += ` (${details.join(', ')})`;
+                            } else if (type.description) {
+                              displayText += ` (${type.description})`;
+                            }
+
+                            return (
+                              <option key={type.id} value={type.typeCode}>
+                                {displayText}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* 型式データがない場合の警告 */}
+                    {selectedModel && modelTypes.length === 0 && (
+                      <div className="px-4 py-3 bg-amber-500/20 border border-amber-400/30 rounded-xl text-sm text-amber-200">
+                        この車種の型式データはまだ取得されていません。
+                      </div>
+                    )}
+
+                    {/* 検索ボタン */}
+                    <button
+                      onClick={handleSearch}
+                      disabled={isSearching || !selectedModel || !selectedType}
+                      className="w-full mt-2 px-6 py-4 bg-blue-500 text-white text-base font-semibold rounded-xl hover:bg-blue-600 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                    >
+                      {isSearching ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>検索中...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-5 h-5" />
+                          リコールを検索
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {isSearching && (
+                    <div className="bg-blue-500/20 border border-blue-400/30 rounded-xl p-4 mt-4">
+                      <div className="flex items-start gap-3">
+                        <Loader2 className="w-5 h-5 animate-spin text-blue-300 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-white mb-1">
+                            国土交通省データベースから検索中
+                          </p>
+                          <p className="text-xs text-blue-200">
+                            リコール情報の取得には1〜2分程度かかる場合があります。
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <p className="text-gray-500 text-xs mt-4">
-                  国土交通省のデータベースから検索します
-                </p>
-              </div>
-            )}
+                  {/* 国交省届出日範囲表示 */}
+                  {dateRange && dateRange.startDate && dateRange.endDate && (
+                    <p className="text-gray-400 text-xs mt-4 text-center">
+                      {dateRange.startDate} ～ {dateRange.endDate}の届出から検索
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* エラー表示 */}
             {searchError && (
@@ -1071,8 +1090,8 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-gray-900 rounded flex items-center justify-center">
-                  <span className="text-white text-[8px] font-bold">RC</span>
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-blue-700 rounded flex items-center justify-center">
+                  <span className="text-white text-[8px] font-bold">RN</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-xs text-gray-400">

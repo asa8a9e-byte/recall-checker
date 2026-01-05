@@ -6,7 +6,7 @@ import * as cheerio from 'cheerio';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const SKIP_COUNT = 186; // ここから再開
+const SKIP_COUNT = 566; // ここから再開
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));

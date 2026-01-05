@@ -13,12 +13,12 @@ export default function Header({ unreadCount, onAlertClick }: HeaderProps) {
       <div className="max-w-6xl mx-auto px-4 py-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xs font-bold">RC</span>
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-sm">
+              <span className="text-white text-sm font-bold">RN</span>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 tracking-tight">リコールチェッカー</h1>
-              <p className="text-xs text-gray-400">中古車リコール管理</p>
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight">リコナビ</h1>
+              <p className="text-xs text-gray-400">リコール情報検索</p>
             </div>
           </div>
           <button
